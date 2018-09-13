@@ -23,6 +23,7 @@ import com.aliyun.oss.common.auth.Credentials;
 import com.aliyun.oss.common.auth.CredentialsProvider;
 import com.aliyun.oss.common.comm.ResponseMessage;
 import com.aliyun.oss.common.utils.HttpUtil;
+import com.aliyun.oss.common.utils.VersionInfoUtils;
 import com.aliyun.oss.model.*;
 import com.aliyun.oss.model.SetBucketCORSRequest.CORSRule;
 import com.qiniu.common.AutoZone;
@@ -283,6 +284,7 @@ public class QiniuOSSClient implements OSS {
         Request request = new Request.Builder()
                 .url(signedUrl)
                 .addHeader("Host", domain)
+                .addHeader("User-Agent", VersionInfoUtils.getDefaultUserAgent())
                 .build();
 
         try {
