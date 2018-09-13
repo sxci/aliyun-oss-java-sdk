@@ -294,6 +294,11 @@ public class QiniuOSSClient implements OSS {
                 byte[] b = res.body().source().readByteArray(Math.min(512, res.body().contentLength()));
                 String rawResponseError = new String(b);
                 res.close();
+
+                if (res.code() == 404 && rawResponseError.indexOf("\"no such domain\"") != -1) {
+                    removeHttpDomainCache(bucketName);
+                }
+
                 throw new OSSException(res.message(), res.code() + "", res.header("X-Reqid"),
                         domain, null, null, "GET", rawResponseError);
             }
@@ -1383,6 +1388,10 @@ public class QiniuOSSClient implements OSS {
         }
         domainCache.put(bucketName, new Host(domain));
         return domain;
+    }
+
+    private void removeHttpDomainCache(String bucketName) {
+        domainCache.remove(bucketName);
     }
 
     class Host {
