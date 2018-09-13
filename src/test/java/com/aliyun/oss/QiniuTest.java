@@ -25,11 +25,6 @@ public class QiniuTest {
     public static String testAccessKey = System.getenv("QINIU_ACCESS_KEY");
     public static String testSecretKey = System.getenv("QINIU_SECRET_KEY");
 
-    {
-        testAccessKey = "anEC5u_72gw1kZPSy3Dsq1lo_DPXyvuPDaj4ePkN";
-        testSecretKey = "Ybuk4unN4XL267Jsr8LRFPiaJzNOGLxqZSc8heL3";
-    }
-
     //z0
     public static final String testBucket_z0 = "javasdk";
     public static final String testKey_z0 = "java-duke.png";
