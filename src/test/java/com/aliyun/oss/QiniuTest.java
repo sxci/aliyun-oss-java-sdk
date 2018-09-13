@@ -24,7 +24,7 @@ public class QiniuTest {
     //valid ak & sk
     public static String testAccessKey = System.getenv("QINIU_ACCESS_KEY");
     public static String testSecretKey = System.getenv("QINIU_SECRET_KEY");
-
+    
     //z0
     public static final String testBucket_z0 = "javasdk";
     public static final String testKey_z0 = "java-duke.png";
@@ -40,7 +40,6 @@ public class QiniuTest {
     public void setUp() throws Exception {
         Configuration config = new Configuration(Zone.zone0());
         qiniuOSSClient = new QiniuOSSClient(testAccessKey, testSecretKey, config);
-        bucketName = createBucket();
         tempFile1 = TestBase.createSampleFile("_oss-java-sdk_qiniu_temp", 234539);
         tempFile2 = File.createTempFile("_oss-java-qiniu2", ".temp");
         key = "oss-java-sdk_/" + new Date().getTime() / 100 + "_" + new Random().nextInt(50000);
@@ -54,7 +53,7 @@ public class QiniuTest {
         try {
             qiniuOSSClient.deleteBucket(bucketName);
         } catch (Exception e) {
-            e.printStackTrace();
+//            e.printStackTrace();
         }
         qiniuOSSClient.shutdown();
         tempFile1.delete();
@@ -63,13 +62,23 @@ public class QiniuTest {
         }
     }
 
+
+
     @Test
     public void testQiniu() throws IOException {
+        bucketName = createBucket();
         listBucket(true);
         putObject();
         listObj(true);
         getObj();
+        getObj();
         delObject();
+        try {
+            Thread.sleep(4 * 1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        getObj404();
         listObj(false);
         delBucket();
         listBucket(false);
@@ -110,6 +119,15 @@ public class QiniuTest {
         GetObjectRequest getReq = new GetObjectRequest(bucketName, key);
         qiniuOSSClient.getObject(getReq, tempFile2);
         Assert.assertEquals(Etag.file(tempFile1), Etag.file(tempFile2));
+    }
+
+    public void getObj404() throws IOException {
+        GetObjectRequest getReq = new GetObjectRequest(bucketName, key);
+        try {
+            qiniuOSSClient.getObject(getReq, tempFile2);
+        } catch (OSSException e) {
+            Assert.assertEquals("404", e.getErrorCode());
+        }
     }
 
     public void delObject() throws IOException {
