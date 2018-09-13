@@ -269,25 +269,32 @@ public class QiniuOSSClient implements OSS {
 
     @Override
     public OSSObject getObject(String bucketName, String key) throws OSSException, ClientException {
-        String[] domains = {};
-        try {
-            domains = getBucketManager().domainList(bucketName);
-        } catch (QiniuException e) {
-            throwAliException(e);
-        }
-        String domain = "";
-        try {
-            domain = domains[0];
-        } catch (Exception e) {
-            throw new ClientException("do not have domain from Qiniu");
-        }
+        String domain = getHttpDomain(bucketName);
+
         String url = "http://" + domain + "/" + HttpUtil.urlEncode(key, "UTF-8");
         String signedUrl = auth.privateDownloadUrl(url, 3600 * 3);
+
+        String iovipHttp = config.zone.getIovipHttp(null);
+        int s = iovipHttp.indexOf("://");
+        s = s == -1 ? 0 : s + 3;
+        String iovipHttpHost = iovipHttp.substring(s);
+        signedUrl = signedUrl.replaceFirst(domain, iovipHttpHost);
+
         Request request = new Request.Builder()
                 .url(signedUrl)
+                .addHeader("Host", domain)
                 .build();
+
         try {
             okhttp3.Response res = getClient().newCall(request).execute();
+
+            if (!res.isSuccessful()) {
+                byte[] b = res.body().source().readByteArray(Math.min(512, res.body().contentLength()));
+                String rawResponseError = new String(b);
+                res.close();
+                throw new OSSException(res.message(), res.code() + "", res.header("X-Reqid"),
+                        domain, null, null, "GET", rawResponseError);
+            }
             OSSObject obj = new OSSObject();
             obj.setBucketName(bucketName);
             obj.setKey(key);
@@ -1349,4 +1356,59 @@ public class QiniuOSSClient implements OSS {
         }
         return _client;
     }
+
+    private DomainCache domainCache = new DomainCache();
+
+    private String getHttpDomain(String bucketName) {
+        Host host = domainCache.get(bucketName);
+        if (host != null && System.currentTimeMillis() / 1000 < host.create + 60 * 10) {
+            return host.host;
+        }
+        if (host != null) {
+            domainCache.remove(bucketName);
+        }
+        String[] domains = {};
+        try {
+            domains = getBucketManager().domainList(bucketName);
+        } catch (QiniuException e) {
+            throwAliException(e);
+        }
+        String domain = "";
+        try {
+            domain = domains[0];
+        } catch (Exception e) {
+            throw new ClientException("do not have domain from Qiniu");
+        }
+        domainCache.put(bucketName, new Host(domain));
+        return domain;
+    }
+
+    class Host {
+        String host;
+        long create;
+
+        Host(String host) {
+            this.host = host;
+            this.create = System.currentTimeMillis() / 1000;
+        }
+    }
+
+    class DomainCache extends LinkedHashMap<String, Host> {
+        private int size;
+
+        public DomainCache() {
+            this(256);
+        }
+
+        public DomainCache(int size) {
+            super(size, 1.0f, true);
+            this.size = size;
+        }
+
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, Host> eldest) {
+            return this.size() > this.size;
+        }
+    }
+
 }
