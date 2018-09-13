@@ -63,7 +63,7 @@ public class QiniuTest {
         }
         qiniuOSSClient.shutdown();
         tempFile1.delete();
-        if(tempFile2 != null) {
+        if (tempFile2 != null) {
             tempFile2.delete();
         }
     }
@@ -96,7 +96,7 @@ public class QiniuTest {
     public void listBucket(boolean hope) {
         List<Bucket> bkts = qiniuOSSClient.listBuckets();
         boolean hasNewBucket = false;
-        for(Bucket b : bkts) {
+        for (Bucket b : bkts) {
             if (bucketName.equalsIgnoreCase(b.getName())) {
                 hasNewBucket = true;
                 break;
@@ -104,7 +104,6 @@ public class QiniuTest {
         }
         Assert.assertEquals(" 找到新建的空间 ", hope, hasNewBucket);
     }
-
 
 
     public void putObject() throws IOException {
@@ -125,8 +124,8 @@ public class QiniuTest {
     public void listObj(boolean hope) {
         ObjectListing l = qiniuOSSClient.listObjects(bucketName, "oss-java-sdk_/");
         boolean hasNewFile = false;
-        for(OSSObjectSummary obj : l.getObjectSummaries()) {
-            if(key.equalsIgnoreCase(obj.getKey())) {
+        for (OSSObjectSummary obj : l.getObjectSummaries()) {
+            if (key.equalsIgnoreCase(obj.getKey())) {
                 hasNewFile = true;
                 break;
             }

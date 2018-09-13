@@ -21,16 +21,12 @@ package com.aliyun.oss;
 
 import com.aliyun.oss.common.auth.Credentials;
 import com.aliyun.oss.common.auth.CredentialsProvider;
-import com.aliyun.oss.common.auth.DefaultCredentialProvider;
-import com.aliyun.oss.common.auth.ServiceSignature;
-import com.aliyun.oss.common.comm.*;
-import com.aliyun.oss.common.utils.*;
-import com.aliyun.oss.internal.*;
+import com.aliyun.oss.common.comm.ResponseMessage;
+import com.aliyun.oss.common.utils.HttpUtil;
 import com.aliyun.oss.model.*;
 import com.aliyun.oss.model.SetBucketCORSRequest.CORSRule;
 import com.qiniu.common.AutoZone;
 import com.qiniu.common.QiniuException;
-import com.qiniu.http.Client;
 import com.qiniu.http.Response;
 import com.qiniu.storage.BucketManager;
 import com.qiniu.storage.Configuration;
@@ -38,9 +34,8 @@ import com.qiniu.storage.UploadManager;
 import com.qiniu.storage.model.FileInfo;
 import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
-import jdk.internal.joptsimple.internal.Strings;
-import okhttp3.*;
 import okhttp3.Authenticator;
+import okhttp3.*;
 import qiniu.happydns.Domain;
 
 import java.io.*;
@@ -48,17 +43,13 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import static com.aliyun.oss.common.utils.CodingUtils.assertParameterNotNull;
-import static com.aliyun.oss.common.utils.IOUtils.checkFile;
 import static com.aliyun.oss.common.utils.IOUtils.safeClose;
 import static com.aliyun.oss.common.utils.LogUtils.logException;
 import static com.aliyun.oss.internal.OSSConstants.DEFAULT_BUFFER_SIZE;
-import static com.aliyun.oss.internal.OSSConstants.DEFAULT_CHARSET_NAME;
-import static com.aliyun.oss.internal.OSSConstants.DEFAULT_OSS_ENDPOINT;
-import static com.aliyun.oss.internal.OSSUtils.*;
-import static com.aliyun.oss.internal.RequestParameters.*;
+import static com.aliyun.oss.internal.OSSUtils.OSS_RESOURCE_MANAGER;
 
 // 若部分代码要求传入 OSSClient ，可修改为 public class QiniuOSSClient extends OSSClient 以满足语法要求
+
 /**
  * The entry point class of OSS that implements the OSS interface.
  */
@@ -115,7 +106,7 @@ public class QiniuOSSClient implements OSS {
             // TODO 不支持创建时指定是否低频，是否私有
             // https://developer.qiniu.com/kodo/api/1382/mkbucketv2
             getBucketManager().createBucket(bucketName, region);
-            Bucket bkt =  new Bucket(bucketName);
+            Bucket bkt = new Bucket(bucketName);
             bkt.setLocation(region);
             bkt.setCreationDate(new Date());
             //TODO no owner
@@ -151,7 +142,7 @@ public class QiniuOSSClient implements OSS {
             // CHECKSTYLE:ON
             String[] bkts = getBucketManager().buckets();
             List<Bucket> list = new ArrayList<Bucket>(bkts.length);
-            for(int i=0; i< bkts.length; i++) {
+            for (int i = 0; i < bkts.length; i++) {
                 String name = bkts[i];
                 Bucket bkt = new Bucket(name);
                 //TODO no owner
@@ -187,7 +178,7 @@ public class QiniuOSSClient implements OSS {
 
     @Override
     public void deleteObject(GenericRequest genericRequest) throws OSSException, ClientException {
-        deleteObject(genericRequest.getBucketName(),genericRequest.getKey());
+        deleteObject(genericRequest.getBucketName(), genericRequest.getKey());
     }
 
     @Override
@@ -196,7 +187,6 @@ public class QiniuOSSClient implements OSS {
         // 不要求实现，需要的话，可以考虑 batch 删除
         throw new UnsupportedOperationException(unsupportedMsg);
     }
-
 
 
     @Override
@@ -275,7 +265,6 @@ public class QiniuOSSClient implements OSS {
         // 不要求实现，暂不清楚行为逻辑
         throw new UnsupportedOperationException(unsupportedMsg);
     }
-
 
 
     @Override
@@ -382,14 +371,14 @@ public class QiniuOSSClient implements OSS {
             }
 
             List<OSSObjectSummary> objectSummaries = new ArrayList<OSSObjectSummary>(files.items.length);
-            for(int i=0; i<files.items.length; i++) {
+            for (int i = 0; i < files.items.length; i++) {
                 FileInfo info = files.items[i];
                 OSSObjectSummary obj = new OSSObjectSummary();
                 // 0 表示标准存储；1 表示低频存储
                 StorageClass storageClass = info.type == 0 ? StorageClass.Standard : StorageClass.IA;
                 obj.setStorageClass(storageClass.toString());
                 obj.setSize(info.fsize);
-                obj.setLastModified(new Date(info.putTime/10000000)); // 百纳秒， 7 个 0
+                obj.setLastModified(new Date(info.putTime / 10000000)); // 百纳秒， 7 个 0
                 obj.setKey(info.key);
                 obj.setETag(info.hash);
                 // 0 公开  1 私有
@@ -492,7 +481,7 @@ public class QiniuOSSClient implements OSS {
 
     @Override
     public CopyObjectResult copyObject(String sourceBucketName, String sourceKey, String destinationBucketName,
-            String destinationKey) throws OSSException, ClientException {
+                                       String destinationKey) throws OSSException, ClientException {
 //        getBucketManager().copy(sourceBucketName, sourceKey, destinationBucketName, destinationKey);
         // 不要求实现
         throw new UnsupportedOperationException(unsupportedMsg);
@@ -1106,7 +1095,7 @@ public class QiniuOSSClient implements OSS {
 
     @Override
     public void generateVodPlaylist(String bucketName, String liveChannelName, String PlaylistName, long startTime,
-            long endTime) throws OSSException, ClientException {
+                                    long endTime) throws OSSException, ClientException {
         throw new UnsupportedOperationException(unsupportedMsg);
     }
 
