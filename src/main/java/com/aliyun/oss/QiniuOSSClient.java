@@ -37,7 +37,6 @@ import com.qiniu.storage.model.FileListing;
 import com.qiniu.util.Auth;
 import okhttp3.Authenticator;
 import okhttp3.*;
-import qiniu.happydns.Domain;
 
 import java.io.*;
 import java.net.*;
@@ -66,7 +65,8 @@ public class QiniuOSSClient implements OSS {
     private UploadManager _uploadManager;
 
     public QiniuOSSClient(String accessKeyId, String secretAccessKey, Configuration config) {
-        if (config.zone == null || config.zone instanceof AutoZone/* || Strings.isNullOrEmpty(config.zone.getRegion())*/) {
+        if (config.zone == null || config.zone instanceof AutoZone ||
+                config.zone.getRegion() == null || config.zone.getRegion().length() == 0) {
             throw new IllegalArgumentException("region must be set-up or not a fix zone");
         }
         this.auth = Auth.create(accessKeyId, secretAccessKey);
@@ -75,9 +75,7 @@ public class QiniuOSSClient implements OSS {
 
 
     private String getRegion() {
-//        return config.zone.getRegion();
-        // TODO  暂指定为 z0 ，后修改 sdk ，让 zone 有 region 属性
-        return "z0";
+        return config.zone.getRegion();
     }
 
     private void throwAliException(QiniuException e) {
@@ -1317,24 +1315,16 @@ public class QiniuOSSClient implements OSS {
                             return response;
                         }
                     });
-                    if (config.dnsClient != null) {
-                        builder.dns(new Dns() {
+                    if (config.dns != null) {
+                        builder.dns(new okhttp3.Dns() {
                             @Override
                             public List<InetAddress> lookup(String hostname) throws UnknownHostException {
-                                InetAddress[] ips;
-                                Domain domain = new Domain(hostname, false, config.useDnsHostFirst);
                                 try {
-                                    ips = config.dnsClient.queryInetAddress(domain);
-                                } catch (IOException e) {
+                                    return config.dns.lookup(hostname);
+                                } catch (Exception e) {
                                     e.printStackTrace();
-                                    throw new UnknownHostException(e.getMessage());
                                 }
-                                if (ips == null) {
-                                    throw new UnknownHostException(hostname + " resolve failed");
-                                }
-                                List<InetAddress> l = new ArrayList<InetAddress>();
-                                Collections.addAll(l, ips);
-                                return l;
+                                return okhttp3.Dns.SYSTEM.lookup(hostname);
                             }
                         });
                     }
